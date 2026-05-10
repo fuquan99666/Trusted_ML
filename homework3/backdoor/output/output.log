@@ -1,0 +1,3 @@
+[2026/05/10 10:42:01] - Namespace(poison_target=0, trigger_alpha=1.0, batch_size=256, clb_dir='./data/clean-label/0.1/', poison_type='badnets')
+[2026/05/10 10:48:34] - Namespace(poison_target=0, trigger_alpha=1.0, batch_size=256, clb_dir='./data/clean-label/0.1/', poison_type='badnets')
+[2026/05/10 10:48:36] - Epoch 	 lr 	 Time 	 TrainLoss 	 TrainACC 	 PoisonLoss 	 PoisonACC 	 CleanLoss 	 CleanACC

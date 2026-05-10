@@ -1,0 +1,5 @@
+.vscode
+__pycache__
+*.tar.gz
+*.th
+cifar-10-batches-py
