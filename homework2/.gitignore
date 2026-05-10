@@ -1,2 +1,7 @@
 data/
 model-cifar-wideResNet/
+.vscode
+models/
+*.zip
+*.pdf
+test.py

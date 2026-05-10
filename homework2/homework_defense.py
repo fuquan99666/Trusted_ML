@@ -14,9 +14,9 @@ parser.add_argument('--test-batch-size', type=int, default=128, metavar='N',
                     help='input batch size for testing (default: 128)')
 parser.add_argument('--epochs', type=int, default=2, metavar='N',
                     help='number of epochs to train')
-parser.add_argument('--weight-decay', '--wd', default=2e-4,
+parser.add_argument('--weight-decay', '--wd', default=5e-4,
                     type=float, metavar='W')
-parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
+parser.add_argument('--lr', type=float, default=0.03, metavar='LR',
                     help='learning rate')
 parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                     help='SGD momentum')
@@ -24,9 +24,9 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='disables CUDA training')
 parser.add_argument('--epsilon', default=0.031,
                     help='perturbation')
-parser.add_argument('--num-steps', default=10,
+parser.add_argument('--num-steps', default=3,
                     help='perturb number of steps')
-parser.add_argument('--step-size', default=0.007,
+parser.add_argument('--step-size', default=0.01,
                     help='perturb step size')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
@@ -192,7 +192,7 @@ def main():
 
 
 
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay,nesterov=True)
 
     for epoch in range(1, args.epochs + 1):
         # adjust learning rate for SGD
@@ -272,3 +272,12 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+"""
+natural_accuracy:  tensor(0.3909, device='cuda:0')
+robustness:  tensor(0.2636, device='cuda:0')
+
+natural_accuracy:  tensor(0.4389, device='cuda:0')
+robustness:  tensor(0.2846, device='cuda:0')
+"""
