@@ -22,7 +22,7 @@ parser.add_argument('--trigger-alpha', type=float, default=1.0, help='the transp
 parser.add_argument('--mask-file', type=str, required='./mask_out/mask_values.txt', help='The text file containing the mask values')
 
 # Hyper-parameters you can change
-parser.add_argument('--threshold', type=float, default=0.05, help='the threshold for pruning')
+parser.add_argument('--threshold', type=float, default=0.25, help='the threshold for pruning')
 
 args = parser.parse_args()
 args_dict = vars(args)
@@ -40,7 +40,7 @@ def main():
     ])
 
     # Step 1: create poisoned / clean test set
-    trigger_info = torch.load('./trigger_info_foranp.th', map_location=device)
+    trigger_info = torch.load('./trigger_info_foranp.th', map_location=device, weights_only=False)
 
     clean_test = CIFAR10(root=args.data_dir, train=False, download=True, transform=transform_test)
     poison_test = poison.add_predefined_trigger_cifar(data_set=clean_test, trigger_info=trigger_info)
@@ -50,7 +50,7 @@ def main():
     # Step 2: load model checkpoints and trigger info
     net = getattr(models, 'resnet18')(num_classes=10)
     checkpoint = 'badnetsmodel_foranp.th'
-    net.load_state_dict(torch.load(checkpoint, map_location=device))
+    net.load_state_dict(torch.load(checkpoint, map_location=device, weights_only=False))
     net = net.to(device)
     criterion = torch.nn.CrossEntropyLoss().to(device)
 

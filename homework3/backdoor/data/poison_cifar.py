@@ -46,6 +46,7 @@ def generate_trigger(trigger_type):
         # so just set the pixel value of the right bottom corner with the trigger value and set the corresponding mask value to 1.
         pattern[29:32, 29:32, 0] = trigger_value 
         mask[29:32, 29:32, 0] = 1
+        print(f"Pattern shape: {pattern.shape}, Mask shape: {mask.shape}")
 
         return pattern, mask
     elif trigger_type == 'checkerboard_4corner':  # checkerboard at four corners
@@ -125,9 +126,12 @@ def add_trigger_cifar(data_set, trigger_type, poison_rate, poison_target, trigge
         # for these selected samples, we should 
         # add the trigger to the image and change the label to the target label.
         # and notice to use trigger_alpha to control the transparency of the trigger.
-        mask = mask.astype(np.float32) * trigger_alpha
-        pattern = poison_set.data[idx] * (1 - mask) + mask * pattern.astype(np.float32)
-        poison_set.data[idx] = pattern.astype(np.uint8)
+        mask1 = mask.astype(np.float32) * trigger_alpha
+        # print(f"poison_set data shape: {poison_set.data.shape}, pattern shape: {pattern.shape}, mask shape: {mask.shape}")
+        poison_set.data[idx] = (poison_set.data[idx] * (1 - mask1) + mask1 * pattern.astype(np.float32)).astype(np.uint8)
+        # print(f"pattern shape after adding trigger: {pattern.shape}")
+
+        # poison_set.data[idx] = pattern.astype(np.uint8)
         poison_set.targets[idx] = poison_target
 
     trigger_info = {'trigger_pattern': pattern[np.newaxis, :, :, :], 'trigger_mask': mask[np.newaxis, :, :, :],
@@ -136,7 +140,7 @@ def add_trigger_cifar(data_set, trigger_type, poison_rate, poison_target, trigge
     return poison_set, trigger_info
 
 
-def add_predefined_trigger_cifar(data_set, trigger_info):
+def add_predefined_trigger_cifar_1(data_set, trigger_info):
     """
     Poisoning dataset using a predefined trigger. (Use to generate a poisoned test dataset)
     This can be easily extended to various attacks as long as they provide trigger information for every sample.
@@ -154,10 +158,6 @@ def add_predefined_trigger_cifar(data_set, trigger_info):
     trigger_alpha = trigger_info['trigger_alpha']
     poison_target = trigger_info['poison_target']
     #### Add triggers to all clean images to produce backdoor images (modify poison_set.data for all sample)
-    #### Modify poison images' labels (modify poison_set.targets for all sample)
-    #### write your code here
-    #### Remove the samples whose original labels equal to the target label
-    #### Return a modified poison_set
     #### 2points
     #########################################
     # we want to make some poison test dataset, so
@@ -167,6 +167,7 @@ def add_predefined_trigger_cifar(data_set, trigger_info):
     
     for idx in range(len(poison_set.targets)):
         if poison_set.targets[idx] != poison_target:
+
             pattern = poison_set.data[idx] * (1 - mask) + mask * pattern.astype(np.float32)
             poison_set.data[idx] = pattern.astype(np.uint8)
             poison_set.targets[idx] = poison_target
@@ -176,6 +177,51 @@ def add_predefined_trigger_cifar(data_set, trigger_info):
             poison_set.data[idx] = np.zeros_like(poison_set.data[idx])
             poison_set.targets[idx] = -1
 
+    return poison_set
+
+
+def add_predefined_trigger_cifar(data_set, trigger_info):
+    """
+    Poisoning dataset using a predefined trigger.
+    """
+    if trigger_info is None:
+        return data_set
+    
+    pattern = trigger_info['trigger_pattern']
+    mask = trigger_info['trigger_mask']
+    trigger_alpha = trigger_info['trigger_alpha']
+    poison_target = trigger_info['poison_target']
+    
+
+    if pattern.ndim == 4:
+        pattern = pattern.squeeze(0)
+    if mask.ndim == 4:
+        mask = mask.squeeze(0)
+    
+    
+    mask1 = mask.astype(np.float32) * trigger_alpha
+    
+    # 使用列表收集需要保留的样本
+    data_list = []
+    target_list = []
+    
+    for idx in range(len(data_set.targets)):
+        if data_set.targets[idx] != poison_target[0]:
+
+            # 添加 trigger 并改标签
+            img = data_set.data[idx].astype(np.float32)
+            poisoned_img = img * (1 - mask1) + mask1 * pattern.astype(np.float32)
+            data_list.append(poisoned_img.astype(np.uint8))
+            target_list.append(poison_target[0])
+        # 原标签等于 target 的直接跳过（不添加）
+    
+    # 创建新的数据集对象
+    poison_set = deepcopy(data_set)
+    poison_set.data = np.array(data_list)
+    poison_set.targets = target_list
+    
+    print(f"Filtered: {len(data_set.targets)} -> {len(data_list)} samples")
+    
     return poison_set
 
 

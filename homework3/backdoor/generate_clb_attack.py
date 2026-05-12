@@ -46,12 +46,20 @@ def generate_trigger():
     ###Triggers add at four corners
     ###Same as poison cifar, therefore no points 
     ####################################
+    pattern[0:3, 0:3, 0] = trigger_value
+    pattern[0:3, 29:32, 0] = trigger_value
+    pattern[29:32, 0:3, 0] = trigger_value
+    pattern[29:32, 29:32, 0] = trigger_value
+    mask[0:3, 0:3, 0] = 1
+    mask[0:3, 29:32, 0] = 1
+    mask[29:32, 0:3, 0] = 1
+    mask[29:32, 29:32, 0] = 1
 
     return pattern, mask
 
 
 def clamp(X, lower_limit, upper_limit):
-    return torch.max(torch.min(X, upper_limit), lower_limit)
+    return torch.clamp(X, min=lower_limit, max=upper_limit)
 
 
 def attack_pgd(model, X, y, epsilon, alpha, max_attack_iters, restarts):

@@ -1,0 +1,9 @@
+Iter     lr      Time    TrainLoss       TrainACC        PoisonLoss      PoisonACC       CleanLoss       CleanACC
+250      0.200   65.6    0.6076          0.9629          0.2647          0.9253          0.2345          0.9299
+500      0.200   65.4    0.4557          0.9802          0.5229          0.7570          0.2450          0.9248
+750      0.200   65.5    0.4259          0.9847          0.9971          0.4364          0.2542          0.9220
+1000     0.200   65.5    0.4057          0.9876          1.4038          0.2472          0.2564          0.9216
+
+No.      Layer Name      Neuron Idx      Mask    PoisonLoss      PoisonACC       CleanLoss       CleanACC
+0        None            None            0.0042          1.0000          0.2491          0.9388
+161.00   layer2.1.bn1    12      0.25    3.3588          0.0453          0.2844          0.9208

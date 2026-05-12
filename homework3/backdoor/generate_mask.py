@@ -5,7 +5,6 @@ import argparse
 from xml.etree.ElementInclude import include
 import numpy as np
 from collections import OrderedDict
-from pydantic import IntEnumError
 import torch
 from torch.utils.data import DataLoader, RandomSampler
 from torchvision.datasets import CIFAR10
@@ -30,7 +29,7 @@ parser.add_argument('--anp-steps', type=int, default=2)
 parser.add_argument('--anp-eps', type=float, default=0.1)
 
 # Parameters you can change
-parser.add_argument('--anp-alpha', type=float, default=0.2)
+parser.add_argument('--anp-alpha', type=float, default=0.5)
 
 args = parser.parse_args()
 args_dict = vars(args)
@@ -54,7 +53,7 @@ def main():
     ])
 
     # Step 1: create dataset - clean val set, poisoned test set, and clean test set.
-    trigger_info = torch.load('./trigger_info_foranp.th', map_location=device)
+    trigger_info = torch.load('./trigger_info_foranp.th', map_location=device,weights_only=False)
 
     orig_train = CIFAR10(root=args.data_dir, train=True, download=True, transform=transform_train)
     _, clean_val = poison.split_dataset(dataset=orig_train, val_frac=args.val_frac,
@@ -129,7 +128,7 @@ def sign_grad(model):
     #### get the sign gradients to the noise
     noise = [param for name, param in model.named_parameters() if 'neuron_noise' in name]
     for p in noise:
-        p.grad.data = torch.sign(p.grad.data)
+        p.grad.data = -torch.sign(p.grad.data)
 
 
 def include_noise(model): 
@@ -176,6 +175,46 @@ def mask_train(model, criterion, mask_opt, noise_opt, data_loader):
         # step 2: calculate noise loss 
         # step 3: calculate clean loss
         # step 4: ANP loss and update mask
+        
+        # Step 1: 内层循环 - 寻找最优噪声（最大化损失）
+
+        reset(model, rand_init=True)  # 约束 noise 在 epsilon 范围内
+        for _ in range(args.anp_steps):
+            include_noise(model)      # 激活 noise
+            noise_opt.zero_grad()
+            output = model(images)
+            noise_loss = criterion(output, labels)
+            noise_loss.backward()
+            sign_grad(model)           # 取梯度符号（FGSM思想）
+            noise_opt.step()           # 更新 noise（使损失最大化）
+            # clip noise to be within the epsilon ball
+
+        
+        # Step 2: 计算带噪声的损失
+        output_noise = model(images)
+        loss_adv = criterion(output_noise, labels)  # 对抗损失
+        
+        # Step 3: 计算干净损失（无噪声）
+        exclude_noise(model)
+        output_clean = model(images)
+        loss_natural = criterion(output_clean, labels)  # 自然损失
+        
+        # Step 4: ANP 综合损失 + 更新 mask
+        loss = args.anp_alpha * loss_natural + (1-args.anp_alpha) * loss_adv
+        mask_opt.zero_grad()
+        loss.backward()
+        mask_opt.step()
+        clip_mask(model, 0.0, 1.0)  # 约束 mask 在 [0,1]
+
+
+        total_loss += loss.item()
+        
+        # 计算准确率（基于干净输出）
+        pred_choice = output_clean.data.max(1)[1]
+        correct = pred_choice.eq(labels.data.view_as(pred_choice)).sum().item()
+        total_correct += correct
+    
+
     loss = total_loss / len(data_loader)
     acc = float(total_correct) / nb_samples
     return loss, acc
